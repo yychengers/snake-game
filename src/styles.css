@@ -1,0 +1,230 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #334155;
+  background: #f5f7f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.game-shell {
+  width: min(94vw, 760px);
+  padding: 18px;
+  border: 1px solid #d8e1d4;
+  border-radius: 12px;
+  background: #fcfdfb;
+  box-shadow: 0 8px 24px rgba(51, 65, 85, 0.08);
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  gap: 8px 12px;
+  font-size: 14px;
+}
+
+.mode-panel,
+.actions,
+.settings-panel {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mode-panel,
+.settings-panel {
+  margin-bottom: 12px;
+}
+
+.mode-btn.active,
+.start-btn {
+  border-color: #8da98d;
+  background: #edf5eb;
+}
+
+.settings-panel {
+  align-items: center;
+  border: 1px solid #dbe7d8;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.settings-panel label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.board {
+  border: 1px solid #c8d6c0;
+  border-radius: 10px;
+  background: #f2f7ef;
+  overflow: hidden;
+}
+
+.game-canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.legend {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  border: 1px solid #9fb29a;
+  vertical-align: middle;
+}
+
+.legend-dot.food-normal {
+  background: #e58f7f;
+}
+
+.legend-dot.food-speed {
+  background: #efb36a;
+}
+
+.legend-dot.food-slow {
+  background: #9ac4dd;
+}
+
+.legend-dot.food-double {
+  background: #d5a6e6;
+}
+
+.legend-dot.obstacle {
+  background: #a8b3a1;
+}
+
+.leaderboard,
+.analytics-panel {
+  margin-top: 12px;
+  border-top: 1px solid #dbe7d8;
+  padding-top: 10px;
+}
+
+.leaderboard-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaderboard h3,
+.analytics-panel h3,
+.leaderboard h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.leaderboard p,
+.analytics-panel p {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.leaderboard ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+button,
+select,
+input[type='range'] {
+  border: 1px solid #bccab5;
+  border-radius: 8px;
+  background: #f8fbf6;
+  color: #334155;
+  padding: 8px 10px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.touch-controls {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.touch-row {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 28, 20, 0.28);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+
+.modal-card {
+  width: min(90vw, 420px);
+  background: #ffffff;
+  border: 1px solid #c8d6c0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.modal-card h3 {
+  margin: 0 0 8px;
+}
+
+.modal-card p {
+  margin: 4px 0;
+}
+
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .game-shell {
+    width: 100vw;
+    min-height: 100vh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .settings-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

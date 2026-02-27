@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+
+# local env & tool state
+.netlify/
+.vercel/
+
+# system
+.DS_Store
