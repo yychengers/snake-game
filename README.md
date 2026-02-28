@@ -100,7 +100,7 @@ npm run preview
 
 ## 成就系统（12 项）
 ### 特性
-- 主界面独立 Achievements 区块
+- 主界面独立成就区块
 - 显示 `进度条 + 数字进度（x/target）`
 - 隐藏成就支持“半明确提示”
 - 每局最多弹 1 条解锁提示，其余进入“待查看新解锁”
@@ -108,18 +108,18 @@ npm run preview
 - 成就可单独重置（不影响排行榜）
 
 ### 成就列表
-- First Bite
-- Getting Warmed Up
-- Score Chaser
-- Marathon Snake
-- Combo Rookie
-- Combo Master
-- Speed Runner
-- Control Specialist
-- Classic Cleared
-- Obstacle Ace
-- Challenge Pulse（隐藏）
-- Endless Spirit（隐藏）
+- 初尝一口
+- 状态渐入
+- 分数追猎者
+- 耐力之蛇
+- 连击新秀
+- 连击大师
+- 极速玩家
+- 控场专家
+- 经典通关
+- 障碍王牌
+- 挑战脉冲（隐藏）
+- 无尽意志（隐藏）
 
 ## 本地数据存储（localStorage）
 - `snake_settings_v1`：用户设置（键位、网格、速度、主题、音效）

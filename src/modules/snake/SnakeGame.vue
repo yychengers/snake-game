@@ -136,7 +136,7 @@ const filteredAchievements = computed(() =>
     return {
       id: item.id,
       title: hiddenLocked ? '???' : item.title,
-      description: hiddenLocked ? item.hint ?? 'Unlock to reveal details.' : item.description,
+      description: hiddenLocked ? item.hint ?? '解锁后查看完整条件。' : item.description,
       hidden: Boolean(item.hidden),
       unlocked: entry.unlocked,
       progress: Math.min(entry.progress, item.target),
@@ -582,7 +582,7 @@ function playEffectTone(freq: number, durationSec: number): void {
 
     <section class="achievements-panel">
       <div class="achievements-head">
-        <h3>Achievements</h3>
+        <h3>成就系统</h3>
         <div class="achievements-controls">
           <select v-model="achievementFilter">
             <option value="all">全部</option>
@@ -601,7 +601,7 @@ function playEffectTone(freq: number, durationSec: number): void {
         <li v-for="item in filteredAchievements" :key="item.id" :class="{ unlocked: item.unlocked }">
           <div class="achievement-row">
             <strong>{{ item.title }}</strong>
-            <span>{{ item.unlocked ? 'Unlocked' : 'Locked' }}</span>
+            <span>{{ item.unlocked ? '已解锁' : '未解锁' }}</span>
           </div>
           <p>{{ item.description }}</p>
           <div class="achievement-progress">
@@ -671,7 +671,7 @@ function playEffectTone(freq: number, durationSec: number): void {
     </div>
 
     <div v-if="achievementToast" class="achievement-toast">
-      <strong>Achievement Unlocked</strong>
+      <strong>成就解锁</strong>
       <span>{{ achievementToast.title }}</span>
     </div>
   </main>
