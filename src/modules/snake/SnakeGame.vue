@@ -656,17 +656,6 @@ function playEffectTone(freq: number, durationSec: number): void {
       </div>
     </div>
 
-    <div v-if="state.isPaused && !isSettled" class="modal-mask" @click.self="togglePauseAction">
-      <section class="modal-card">
-        <h3>游戏已暂停</h3>
-        <p>当前分数 {{ state.totalScore }}，关卡 {{ state.level }}</p>
-        <div class="modal-actions">
-          <button type="button" @click="togglePauseAction">继续</button>
-          <button type="button" @click="restartLevel">重开本关</button>
-        </div>
-      </section>
-    </div>
-
     <div v-if="isSettled" class="modal-mask" @click.self="startGame(selectedMode)">
       <section class="modal-card">
         <h3>{{ state.isCompleted ? '通关成功' : '本局结束' }}</h3>
