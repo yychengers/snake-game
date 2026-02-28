@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type GameSettings } from './config';
+import { DEFAULT_SETTINGS, THEME_IDS, type GameSettings } from './config';
 
 const SETTINGS_KEY = 'snake_settings_v1';
 
@@ -45,5 +45,8 @@ function normalizeSettings(input: Partial<GameSettings>): GameSettings {
     keymap: input.keymap === 'arrows' || input.keymap === 'wasd' || input.keymap === 'both'
       ? input.keymap
       : DEFAULT_SETTINGS.keymap,
+    theme: THEME_IDS.includes(input.theme as (typeof THEME_IDS)[number])
+      ? (input.theme as GameSettings['theme'])
+      : DEFAULT_SETTINGS.theme,
   };
 }

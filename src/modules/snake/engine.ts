@@ -10,7 +10,7 @@ import {
   hasBodyOrObstacleCollision,
   rollFoodType,
 } from './rules';
-import { containsPoint, normalizeLevel } from './utils';
+import { normalizeLevel, pointKey } from './utils';
 import type { AdvanceOptions, Food, GameMode, GameState, InitOptions, Point } from './types';
 
 /**
@@ -191,32 +191,34 @@ export function placeFood(
   state: Pick<GameState, 'width' | 'height' | 'snake' | 'obstacles' | 'mode'>,
   randomFn: () => number = Math.random,
 ): Food {
-  const available: Point[] = [];
+  const blocked = new Set<string>();
+  for (const part of state.snake) blocked.add(pointKey(part));
+  for (const obstacle of state.obstacles) blocked.add(pointKey(obstacle));
 
-  // 扫描棋盘空位：不能和蛇身或障碍重叠
+  // 使用 reservoir sampling 在一次扫描中随机选出可用空位，避免创建大数组。
+  let selected: Point | null = null;
+  let freeCount = 0;
   for (let y = 0; y < state.height; y += 1) {
     for (let x = 0; x < state.width; x += 1) {
-      const point = { x, y };
-      if (!containsPoint(state.snake, point) && !containsPoint(state.obstacles, point)) {
-        available.push(point);
+      if (blocked.has(`${x},${y}`)) continue;
+      freeCount += 1;
+      if (randomFn() < 1 / freeCount) {
+        selected = { x, y };
       }
     }
   }
 
   // 极端场景：无可用空位，返回蛇头位置（避免返回非法点）
-  if (available.length === 0) {
+  if (!selected) {
     return {
       ...state.snake[0],
       type: 'normal',
     };
   }
 
-  const idx = Math.floor(randomFn() * available.length);
-  const point = available[Math.max(0, Math.min(idx, available.length - 1))];
-
   // 食物类型也在这里统一抽样（普通/加速/减速/双倍）
   return {
-    ...point,
+    ...selected,
     type: rollFoodType(state.mode, randomFn),
   };
 }

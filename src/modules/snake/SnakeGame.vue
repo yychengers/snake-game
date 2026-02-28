@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue';
 import {
   addLeaderboardEntry,
   advanceState,
@@ -18,7 +18,6 @@ import {
   MODE_LABEL,
   patchSettings,
   renderGameToCanvas,
-  resetGame,
   restartCurrentLevel,
   saveAnalytics,
   saveLeaderboard,
@@ -27,6 +26,8 @@ import {
   togglePause,
   trackFinish,
   trackStart,
+  THEME_OPTIONS,
+  THEME_PRESETS,
   type AnalyticsData,
   type Direction,
   type GameMode,
@@ -53,13 +54,16 @@ const state = ref<GameState>(
     mode: selectedMode.value,
   }),
 );
-const timeoutId = ref<number | null>(null);
+const rafId = ref<number | null>(null);
+const lastFrameTime = ref<number | null>(null);
+const tickAccumulator = ref(0);
 const showTouchControls = ref(false);
 const startedAt = ref<number | null>(null);
 const leaderboard = ref<LeaderboardData>({ recent: [] });
 const analytics = ref<AnalyticsData>(loadAnalytics());
 const boardRef = ref<HTMLCanvasElement | null>(null);
 const showSettings = ref(false);
+let audioCtx: AudioContext | null = null;
 
 const statusText = computed(() => {
   if (!hasStarted.value) return '选择模式后开始游戏';
@@ -74,6 +78,30 @@ const pauseDisabled = computed(() => !hasStarted.value || state.value.isGameOver
 const modeLabel = computed(() => MODE_LABEL[state.value.mode]);
 const isSettled = computed(() => hasStarted.value && (state.value.isGameOver || state.value.isCompleted));
 const runDurationMs = computed(() => (startedAt.value ? Date.now() - startedAt.value : 0));
+const themeOptions = THEME_OPTIONS;
+const currentTheme = computed(() => THEME_PRESETS[settings.value.theme]);
+const shellStyle = computed<CSSProperties>(() => ({
+  '--shell-bg': currentTheme.value.shellBg,
+  '--shell-border': currentTheme.value.shellBorder,
+  '--shell-shadow': currentTheme.value.shellShadow,
+  '--panel-border': currentTheme.value.panelBorder,
+  '--board-border': currentTheme.value.boardBorder,
+  '--button-bg': currentTheme.value.buttonBg,
+  '--button-border': currentTheme.value.buttonBorder,
+  '--button-text': currentTheme.value.buttonText,
+  '--button-active-bg': currentTheme.value.buttonActiveBg,
+  '--button-active-border': currentTheme.value.buttonActiveBorder,
+  '--text-color': currentTheme.value.text,
+  '--muted-text': currentTheme.value.mutedText,
+  '--modal-overlay': currentTheme.value.overlay,
+  '--modal-bg': currentTheme.value.modalBg,
+  '--theme-font': currentTheme.value.fontFamily,
+  '--food-normal': currentTheme.value.canvas.foodNormal,
+  '--food-speed': currentTheme.value.canvas.foodSpeed,
+  '--food-slow': currentTheme.value.canvas.foodSlow,
+  '--food-double': currentTheme.value.canvas.foodDouble,
+  '--obstacle-color': currentTheme.value.canvas.obstacle,
+}));
 
 const topScore = computed(() => getTopScore(leaderboard.value));
 const fastestCompletion = computed(() => getFastestCompletion(leaderboard.value));
@@ -90,50 +118,81 @@ onMounted(() => {
   showTouchControls.value = window.matchMedia('(pointer: coarse)').matches;
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('resize', drawBoard);
+  applyPageTheme();
   drawBoard();
-  scheduleTick();
+  startLoop();
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('resize', drawBoard);
-  if (timeoutId.value !== null) clearTimeout(timeoutId.value);
+  if (rafId.value !== null) {
+    cancelAnimationFrame(rafId.value);
+  }
 });
 
+watch(() => state.value, drawBoard);
 watch(
-  () => state.value,
-  () => drawBoard(),
-  { deep: true },
+  () => settings.value.theme,
+  () => {
+    applyPageTheme();
+    drawBoard();
+  },
 );
 
-/** 主循环：每帧推进状态，必要时记录结果和播放提示音。 */
-function scheduleTick(): void {
-  if (timeoutId.value !== null) clearTimeout(timeoutId.value);
-
-  const delay = hasStarted.value ? getTickMs(state.value, settings.value.speedScale) : 220;
-  timeoutId.value = window.setTimeout(() => {
-    if (hasStarted.value) {
-      const prev = state.value;
-      state.value = advanceState(state.value);
-
-      if (state.value.totalScore > prev.totalScore) {
-        playEffectTone(660, 0.03);
-      }
-
-      if ((!prev.isGameOver && state.value.isGameOver) || (!prev.isCompleted && state.value.isCompleted)) {
-        persistResult();
-        playEffectTone(state.value.isCompleted ? 840 : 220, 0.12);
-      }
+/** 主循环：使用 rAF + accumulator 提升时间精度与动画平滑性。 */
+function startLoop(): void {
+  const run = (now: number) => {
+    if (lastFrameTime.value === null) {
+      lastFrameTime.value = now;
     }
 
-    scheduleTick();
-  }, delay);
+    const elapsed = Math.min(120, now - lastFrameTime.value);
+    lastFrameTime.value = now;
+
+    if (hasStarted.value) {
+      tickAccumulator.value += elapsed;
+      let guard = 0;
+
+      while (guard < 8) {
+        const tickMs = getTickMs(state.value, settings.value.speedScale);
+        if (tickAccumulator.value < tickMs) break;
+
+        tickAccumulator.value -= tickMs;
+        guard += 1;
+
+        const prev = state.value;
+        state.value = advanceState(state.value);
+
+        if (state.value.totalScore > prev.totalScore) {
+          playEffectTone(660, 0.03);
+        }
+
+        if ((!prev.isGameOver && state.value.isGameOver) || (!prev.isCompleted && state.value.isCompleted)) {
+          persistResult();
+          playEffectTone(state.value.isCompleted ? 840 : 220, 0.12);
+        }
+      }
+    } else {
+      tickAccumulator.value = 0;
+    }
+
+    rafId.value = requestAnimationFrame(run);
+  };
+
+  rafId.value = requestAnimationFrame(run);
 }
 
 /** canvas 绘制入口。 */
 function drawBoard(): void {
   if (!boardRef.value) return;
-  renderGameToCanvas(boardRef.value, state.value);
+  renderGameToCanvas(boardRef.value, state.value, currentTheme.value.canvas);
+}
+
+function applyPageTheme(): void {
+  if (typeof window === 'undefined') return;
+  document.body.style.background = currentTheme.value.pageBackground;
+  document.body.style.color = currentTheme.value.text;
 }
 
 /** 键盘输入处理，支持按设置切换的键位方案。 */
@@ -280,25 +339,31 @@ function applySettingsAndRestart(): void {
 /** 简单提示音；默认关闭，可在设置里开启。 */
 function playEffectTone(freq: number, durationSec: number): void {
   if (!settings.value.audioEnabled || typeof window === 'undefined') return;
-  const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextClass) return;
 
-  const ctx = new AudioContextClass();
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
+  audioCtx ??= new AudioContextClass();
+  if (audioCtx.state === 'suspended') {
+    void audioCtx.resume();
+  }
+
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
 
   oscillator.type = 'sine';
   oscillator.frequency.value = freq;
   gain.gain.value = 0.03;
   oscillator.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(audioCtx.destination);
   oscillator.start();
-  oscillator.stop(ctx.currentTime + durationSec);
+  oscillator.stop(audioCtx.currentTime + durationSec);
 }
 </script>
 
 <template>
-  <main class="game-shell">
+  <main class="game-shell" :style="shellStyle">
     <header class="hud">
       <div>模式：<strong>{{ modeLabel }}</strong></div>
       <div>关卡：<strong>{{ state.level }}/{{ state.mode === 'endless' ? '∞' : MAX_LEVEL }}</strong></div>
@@ -323,6 +388,17 @@ function playEffectTone(freq: number, durationSec: number): void {
       </button>
       <button type="button" @click="showSettings = !showSettings">{{ showSettings ? '收起设置' : '展开设置' }}</button>
     </section>
+    <section class="theme-strip">
+      <button
+        v-for="theme in themeOptions"
+        :key="theme.id"
+        type="button"
+        :class="['theme-chip', { active: settings.theme === theme.id }]"
+        @click="updateSettings({ theme: theme.id })"
+      >
+        {{ theme.label }}
+      </button>
+    </section>
 
     <section v-if="showSettings" class="settings-panel">
       <label>
@@ -346,6 +422,12 @@ function playEffectTone(freq: number, durationSec: number): void {
       <label>
         音效
         <input type="checkbox" :checked="settings.audioEnabled" @change="updateSettings({ audioEnabled: ($event.target as HTMLInputElement).checked })" />
+      </label>
+      <label>
+        主题
+        <select :value="settings.theme" @change="updateSettings({ theme: ($event.target as HTMLSelectElement).value as GameSettings['theme'] })">
+          <option v-for="theme in themeOptions" :key="theme.id" :value="theme.id">{{ theme.label }}</option>
+        </select>
       </label>
       <button type="button" @click="applySettingsAndRestart">应用并新开</button>
     </section>

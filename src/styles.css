@@ -1,7 +1,24 @@
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #334155;
-  background: #f5f7f4;
+  --shell-bg: #fcfdfb;
+  --shell-border: #d8e1d4;
+  --shell-shadow: 0 8px 24px rgba(51, 65, 85, 0.08);
+  --panel-border: #dbe7d8;
+  --board-border: #c8d6c0;
+  --button-bg: #f8fbf6;
+  --button-border: #bccab5;
+  --button-text: #334155;
+  --button-active-bg: #edf5eb;
+  --button-active-border: #8da98d;
+  --text-color: #334155;
+  --muted-text: #5b6878;
+  --modal-overlay: rgba(20, 28, 20, 0.28);
+  --modal-bg: #ffffff;
+  --theme-font: 'Nunito Sans', 'Segoe UI', sans-serif;
+  --food-normal: #e58f7f;
+  --food-speed: #efb36a;
+  --food-slow: #9ac4dd;
+  --food-double: #d5a6e6;
+  --obstacle-color: #a8b3a1;
 }
 
 * {
@@ -13,15 +30,21 @@ body {
   min-height: 100vh;
   display: grid;
   place-items: center;
+  color: var(--text-color);
+  background: radial-gradient(circle at 20% 10%, #f8fbf6 0%, #eef4ea 45%, #e8efe4 100%);
+  transition: background 220ms ease;
 }
 
 .game-shell {
-  width: min(94vw, 760px);
+  width: min(94vw, 900px);
   padding: 18px;
-  border: 1px solid #d8e1d4;
-  border-radius: 12px;
-  background: #fcfdfb;
-  box-shadow: 0 8px 24px rgba(51, 65, 85, 0.08);
+  border: 1px solid var(--shell-border);
+  border-radius: 14px;
+  background: var(--shell-bg);
+  box-shadow: var(--shell-shadow);
+  font-family: var(--theme-font);
+  color: var(--text-color);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
 }
 
 .hud {
@@ -41,19 +64,32 @@ body {
 }
 
 .mode-panel,
-.settings-panel {
+.settings-panel,
+.theme-strip {
   margin-bottom: 12px;
 }
 
+.theme-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.theme-chip {
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+
 .mode-btn.active,
-.start-btn {
-  border-color: #8da98d;
-  background: #edf5eb;
+.start-btn,
+.theme-chip.active {
+  border-color: var(--button-active-border);
+  background: var(--button-active-bg);
 }
 
 .settings-panel {
   align-items: center;
-  border: 1px solid #dbe7d8;
+  border: 1px solid var(--panel-border);
   border-radius: 10px;
   padding: 10px;
 }
@@ -66,9 +102,9 @@ body {
 }
 
 .board {
-  border: 1px solid #c8d6c0;
+  border: 1px solid var(--board-border);
   border-radius: 10px;
-  background: #f2f7ef;
+  background: color-mix(in srgb, var(--shell-bg) 82%, #ffffff 18%);
   overflow: hidden;
 }
 
@@ -92,34 +128,34 @@ body {
   height: 10px;
   border-radius: 2px;
   margin-right: 4px;
-  border: 1px solid #9fb29a;
+  border: 1px solid color-mix(in srgb, var(--button-border) 70%, #000 30%);
   vertical-align: middle;
 }
 
 .legend-dot.food-normal {
-  background: #e58f7f;
+  background: var(--food-normal);
 }
 
 .legend-dot.food-speed {
-  background: #efb36a;
+  background: var(--food-speed);
 }
 
 .legend-dot.food-slow {
-  background: #9ac4dd;
+  background: var(--food-slow);
 }
 
 .legend-dot.food-double {
-  background: #d5a6e6;
+  background: var(--food-double);
 }
 
 .legend-dot.obstacle {
-  background: #a8b3a1;
+  background: var(--obstacle-color);
 }
 
 .leaderboard,
 .analytics-panel {
   margin-top: 12px;
-  border-top: 1px solid #dbe7d8;
+  border-top: 1px solid var(--panel-border);
   padding-top: 10px;
 }
 
@@ -141,6 +177,7 @@ body {
 .analytics-panel p {
   margin: 4px 0;
   font-size: 12px;
+  color: var(--muted-text);
 }
 
 .leaderboard ul {
@@ -154,10 +191,10 @@ body {
 button,
 select,
 input[type='range'] {
-  border: 1px solid #bccab5;
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  background: #f8fbf6;
-  color: #334155;
+  background: var(--button-bg);
+  color: var(--button-text);
   padding: 8px 10px;
 }
 
@@ -186,7 +223,7 @@ button:disabled {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(20, 28, 20, 0.28);
+  background: var(--modal-overlay);
   display: grid;
   place-items: center;
   z-index: 10;
@@ -194,8 +231,8 @@ button:disabled {
 
 .modal-card {
   width: min(90vw, 420px);
-  background: #ffffff;
-  border: 1px solid #c8d6c0;
+  background: var(--modal-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 16px;
 }
@@ -226,5 +263,9 @@ button:disabled {
   .settings-panel {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .theme-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

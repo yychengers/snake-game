@@ -64,8 +64,13 @@ export function clearLeaderboard(): LeaderboardData {
 
 /** 返回总榜最高分记录。 */
 export function getTopScore(data: LeaderboardData): LeaderboardEntry | null {
-  if (data.recent.length === 0) return null;
-  return [...data.recent].sort((a, b) => b.totalScore - a.totalScore)[0];
+  let best: LeaderboardEntry | null = null;
+  for (const item of data.recent) {
+    if (!best || item.totalScore > best.totalScore) {
+      best = item;
+    }
+  }
+  return best;
 }
 
 /** 返回指定模式最高分记录。 */
@@ -73,16 +78,26 @@ export function getTopScoreByMode(
   data: LeaderboardData,
   mode: LeaderboardEntry['mode'],
 ): LeaderboardEntry | null {
-  const items = data.recent.filter((item) => item.mode === mode);
-  if (items.length === 0) return null;
-  return [...items].sort((a, b) => b.totalScore - a.totalScore)[0];
+  let best: LeaderboardEntry | null = null;
+  for (const item of data.recent) {
+    if (item.mode !== mode) continue;
+    if (!best || item.totalScore > best.totalScore) {
+      best = item;
+    }
+  }
+  return best;
 }
 
 /** 返回最快通关记录（仅统计 completed=true）。 */
 export function getFastestCompletion(data: LeaderboardData): LeaderboardEntry | null {
-  const items = data.recent.filter((item) => item.completed);
-  if (items.length === 0) return null;
-  return [...items].sort((a, b) => a.durationMs - b.durationMs)[0];
+  let fastest: LeaderboardEntry | null = null;
+  for (const item of data.recent) {
+    if (!item.completed) continue;
+    if (!fastest || item.durationMs < fastest.durationMs) {
+      fastest = item;
+    }
+  }
+  return fastest;
 }
 
 /** Normalizes incoming record fields to safe values. */

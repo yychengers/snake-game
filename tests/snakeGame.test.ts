@@ -7,8 +7,11 @@ import {
   getTickMs,
   LEVEL_TARGET_SCORE,
   MODE_BALANCE,
+  patchSettings,
   placeFood,
+  restartCurrentLevel,
   resetGame,
+  togglePause,
   type GameState,
 } from '../src/modules/snake';
 
@@ -151,6 +154,53 @@ describe('snake game expanded logic', () => {
     const next = advanceState(state, { randomFn: () => 0 });
     expect(next.effects.doubleTicks).toBe(EFFECT_TICKS);
     expect(next.totalScore).toBe(2);
+  });
+
+  it('togglePause flips paused state and blocks in terminal state', () => {
+    const running = createInitialState({ width: 8, height: 8, mode: 'classic', randomFn: () => 0 });
+    const paused = togglePause(running);
+    expect(paused.isPaused).toBe(true);
+    expect(togglePause(paused).isPaused).toBe(false);
+
+    const over = togglePause({ ...running, isGameOver: true });
+    expect(over.isPaused).toBe(false);
+  });
+
+  it('restartCurrentLevel keeps meta progress but resets round state', () => {
+    const seed = createInitialState({ width: 10, height: 10, mode: 'challenge', randomFn: () => 0 });
+    const progressed: GameState = {
+      ...seed,
+      level: 4,
+      unlockedLevel: 5,
+      totalScore: 88,
+      levelScore: 42,
+      comboCount: 3,
+      comboTicksRemaining: 7,
+      snake: [{ x: 4, y: 4 }, { x: 3, y: 4 }],
+      isPaused: true,
+    };
+
+    const next = restartCurrentLevel(progressed, () => 0);
+    expect(next.mode).toBe('challenge');
+    expect(next.level).toBe(4);
+    expect(next.unlockedLevel).toBe(5);
+    expect(next.totalScore).toBe(88);
+    expect(next.levelScore).toBe(0);
+    expect(next.comboCount).toBe(0);
+    expect(next.snake.length).toBe(1);
+    expect(next.isPaused).toBe(false);
+  });
+
+  it('patchSettings clamps values into allowed ranges', () => {
+    const next = patchSettings(
+      { audioEnabled: false, gridSize: 20, speedScale: 1, keymap: 'both', theme: 'sage' },
+      { gridSize: 200, speedScale: 0.2, keymap: 'invalid' as never, theme: 'invalid' as never },
+    );
+
+    expect(next.gridSize).toBe(36);
+    expect(next.speedScale).toBe(0.7);
+    expect(next.keymap).toBe('both');
+    expect(next.theme).toBe('sage');
   });
 
   it('obstacles never spawn near initial center area', () => {

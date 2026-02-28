@@ -6,3 +6,4 @@ export * from './leaderboard';
 export * from './settings';
 export * from './analytics';
 export * from './canvas';
+export * from './themes';

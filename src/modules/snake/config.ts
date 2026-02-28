@@ -45,7 +45,23 @@ export type GameSettings = {
   gridSize: number;
   speedScale: number;
   keymap: 'arrows' | 'wasd' | 'both';
+  theme: ThemeId;
 };
+
+export const THEME_IDS = [
+  'sage',
+  'sunset',
+  'ocean',
+  'noir',
+  'paper',
+  'retro',
+  'neon',
+  'sand',
+  'forest',
+  'ice',
+] as const;
+
+export type ThemeId = (typeof THEME_IDS)[number];
 
 /** 默认设置，用户可在 UI 中覆盖并持久化。 */
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -53,4 +69,5 @@ export const DEFAULT_SETTINGS: GameSettings = {
   gridSize: 20,
   speedScale: 1,
   keymap: 'both',
+  theme: 'sage',
 };
