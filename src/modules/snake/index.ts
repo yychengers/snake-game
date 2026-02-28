@@ -5,5 +5,6 @@ export * from './engine';
 export * from './leaderboard';
 export * from './settings';
 export * from './analytics';
+export * from './achievements';
 export * from './canvas';
 export * from './themes';

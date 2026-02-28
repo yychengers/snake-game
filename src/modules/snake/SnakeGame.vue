@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue';
 import {
+  ACHIEVEMENTS,
   addLeaderboardEntry,
   advanceState,
+  applyRunAchievements,
+  backfillAchievements,
   clearLeaderboard,
   createInitialState,
   GAME_MODES,
@@ -12,14 +15,17 @@ import {
   getTopScoreByMode,
   LEVEL_TARGET_SCORE,
   loadAnalytics,
+  loadAchievements,
   loadLeaderboard,
   loadSettings,
+  markAchievementUnlocksSeen,
   MAX_LEVEL,
   MODE_LABEL,
   patchSettings,
   renderGameToCanvas,
   restartCurrentLevel,
   saveAnalytics,
+  saveAchievements,
   saveLeaderboard,
   saveSettings,
   setDirection,
@@ -28,6 +34,9 @@ import {
   trackStart,
   THEME_OPTIONS,
   THEME_PRESETS,
+  resetAchievements,
+  type AchievementId,
+  type AchievementStore,
   type AnalyticsData,
   type Direction,
   type GameMode,
@@ -63,6 +72,17 @@ const leaderboard = ref<LeaderboardData>({ recent: [] });
 const analytics = ref<AnalyticsData>(loadAnalytics());
 const boardRef = ref<HTMLCanvasElement | null>(null);
 const showSettings = ref(false);
+const achievements = ref<AchievementStore>(loadAchievements());
+const achievementFilter = ref<'all' | 'unlocked' | 'locked' | 'hidden'>('all');
+const achievementToast = ref<{ id: AchievementId; title: string } | null>(null);
+const runTracker = ref<{
+  mode: GameMode;
+  foodsEaten: number;
+  speedFoods: number;
+  slowFoods: number;
+  maxCombo: number;
+} | null>(null);
+let achievementToastTimer: number | null = null;
 let audioCtx: AudioContext | null = null;
 
 const statusText = computed(() => {
@@ -105,6 +125,31 @@ const shellStyle = computed<CSSProperties>(() => ({
 
 const topScore = computed(() => getTopScore(leaderboard.value));
 const fastestCompletion = computed(() => getFastestCompletion(leaderboard.value));
+const unlockedAchievements = computed(
+  () => ACHIEVEMENTS.filter((item) => achievements.value.entries[item.id].unlocked).length,
+);
+const pendingAchievementCount = computed(() => achievements.value.pendingUnlockIds.length);
+const filteredAchievements = computed(() =>
+  ACHIEVEMENTS.map((item) => {
+    const entry = achievements.value.entries[item.id];
+    const hiddenLocked = Boolean(item.hidden && !entry.unlocked);
+    return {
+      id: item.id,
+      title: hiddenLocked ? '???' : item.title,
+      description: hiddenLocked ? item.hint ?? 'Unlock to reveal details.' : item.description,
+      hidden: Boolean(item.hidden),
+      unlocked: entry.unlocked,
+      progress: Math.min(entry.progress, item.target),
+      target: item.target,
+      progressPct: Math.min(100, Math.floor((Math.min(entry.progress, item.target) / item.target) * 100)),
+    };
+  }).filter((item) => {
+    if (achievementFilter.value === 'all') return true;
+    if (achievementFilter.value === 'hidden') return item.hidden;
+    if (achievementFilter.value === 'unlocked') return item.unlocked;
+    return !item.unlocked;
+  }),
+);
 const topByMode = computed(() =>
   GAME_MODES.map((mode) => ({
     mode,
@@ -115,6 +160,9 @@ const topByMode = computed(() =>
 onMounted(() => {
   leaderboard.value = loadLeaderboard();
   analytics.value = loadAnalytics();
+  const backfilled = backfillAchievements(loadAchievements(), analytics.value, leaderboard.value);
+  achievements.value = backfilled;
+  saveAchievements(backfilled);
   showTouchControls.value = window.matchMedia('(pointer: coarse)').matches;
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('resize', drawBoard);
@@ -128,6 +176,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', drawBoard);
   if (rafId.value !== null) {
     cancelAnimationFrame(rafId.value);
+  }
+  if (achievementToastTimer !== null) {
+    clearTimeout(achievementToastTimer);
   }
 });
 
@@ -163,6 +214,7 @@ function startLoop(): void {
 
         const prev = state.value;
         state.value = advanceState(state.value);
+        updateRunTracker(prev, state.value);
 
         if (state.value.totalScore > prev.totalScore) {
           playEffectTone(660, 0.03);
@@ -253,6 +305,7 @@ function startGame(mode: GameMode): void {
 
   analytics.value = trackStart(analytics.value, mode);
   saveAnalytics(analytics.value);
+  runTracker.value = createRunTracker(mode);
 }
 
 function onTouchDirection(direction: Direction): void {
@@ -268,6 +321,7 @@ function togglePauseAction(): void {
 function restartLevel(): void {
   if (!hasStarted.value) return;
   state.value = restartCurrentLevel(state.value);
+  runTracker.value = createRunTracker(state.value.mode);
 }
 
 /** 结束时写入战绩和统计。 */
@@ -290,6 +344,26 @@ function persistResult(): void {
 
   analytics.value = trackFinish(analytics.value, state.value.mode, durationMs, state.value.isCompleted);
   saveAnalytics(analytics.value);
+
+  const tracker = runTracker.value;
+  const summary = {
+    mode: state.value.mode,
+    completed: state.value.isCompleted,
+    totalScore: state.value.totalScore,
+    finalLevel: state.value.level,
+    foodsEaten: tracker?.foodsEaten ?? 0,
+    speedFoods: tracker?.speedFoods ?? 0,
+    slowFoods: tracker?.slowFoods ?? 0,
+    maxCombo: Math.max(tracker?.maxCombo ?? 0, state.value.comboCount),
+  };
+  const achievementResult = applyRunAchievements(achievements.value, summary);
+  achievements.value = achievementResult.store;
+  saveAchievements(achievementResult.store);
+
+  if (achievementResult.newlyUnlocked.length > 0) {
+    showAchievementUnlockToast(achievementResult.newlyUnlocked[0]);
+  }
+  runTracker.value = null;
 }
 
 function chooseMode(mode: GameMode): void {
@@ -306,6 +380,20 @@ function formatDuration(ms: number): string {
 function clearRecords(): void {
   leaderboard.value = clearLeaderboard();
   saveLeaderboard(leaderboard.value);
+}
+
+function markUnlockNotificationsRead(): void {
+  achievements.value = markAchievementUnlocksSeen(achievements.value);
+  saveAchievements(achievements.value);
+}
+
+function resetAchievementProgress(): void {
+  if (typeof window !== 'undefined') {
+    const confirmed = window.confirm('确认重置所有成就进度吗？此操作不可撤销。');
+    if (!confirmed) return;
+  }
+  achievements.value = resetAchievements();
+  achievementFilter.value = 'all';
 }
 
 /** 局部更新设置并立即持久化。 */
@@ -334,6 +422,48 @@ function applySettingsAndRestart(): void {
     return;
   }
   startGame(selectedMode.value);
+}
+
+function createRunTracker(mode: GameMode): {
+  mode: GameMode;
+  foodsEaten: number;
+  speedFoods: number;
+  slowFoods: number;
+  maxCombo: number;
+} {
+  return {
+    mode,
+    foodsEaten: 0,
+    speedFoods: 0,
+    slowFoods: 0,
+    maxCombo: 0,
+  };
+}
+
+function updateRunTracker(prev: GameState, next: GameState): void {
+  if (!runTracker.value) return;
+  runTracker.value.maxCombo = Math.max(runTracker.value.maxCombo, next.comboCount);
+  if (next.totalScore <= prev.totalScore) return;
+
+  runTracker.value.foodsEaten += 1;
+  if (prev.food.type === 'speed') {
+    runTracker.value.speedFoods += 1;
+  } else if (prev.food.type === 'slow') {
+    runTracker.value.slowFoods += 1;
+  }
+}
+
+function showAchievementUnlockToast(id: AchievementId): void {
+  const definition = ACHIEVEMENTS.find((item) => item.id === id);
+  if (!definition) return;
+  achievementToast.value = { id, title: definition.title };
+  if (achievementToastTimer !== null) {
+    clearTimeout(achievementToastTimer);
+  }
+  achievementToastTimer = window.setTimeout(() => {
+    achievementToast.value = null;
+  }, 2300);
+  playEffectTone(980, 0.08);
 }
 
 /** 简单提示音；默认关闭，可在设置里开启。 */
@@ -450,6 +580,38 @@ function playEffectTone(freq: number, durationSec: number): void {
       <button type="button" @click="startGame(selectedMode)">新游戏 (N)</button>
     </div>
 
+    <section class="achievements-panel">
+      <div class="achievements-head">
+        <h3>Achievements</h3>
+        <div class="achievements-controls">
+          <select v-model="achievementFilter">
+            <option value="all">全部</option>
+            <option value="locked">未解锁</option>
+            <option value="unlocked">已解锁</option>
+            <option value="hidden">隐藏</option>
+          </select>
+          <button v-if="pendingAchievementCount > 0" type="button" @click="markUnlockNotificationsRead">
+            查看新解锁 ({{ pendingAchievementCount }})
+          </button>
+          <button type="button" @click="resetAchievementProgress">重置成就</button>
+        </div>
+      </div>
+      <p>已解锁 {{ unlockedAchievements }}/{{ ACHIEVEMENTS.length }}</p>
+      <ul class="achievement-list">
+        <li v-for="item in filteredAchievements" :key="item.id" :class="{ unlocked: item.unlocked }">
+          <div class="achievement-row">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.unlocked ? 'Unlocked' : 'Locked' }}</span>
+          </div>
+          <p>{{ item.description }}</p>
+          <div class="achievement-progress">
+            <div class="achievement-progress-bar" :style="{ width: `${item.progressPct}%` }" />
+          </div>
+          <small>{{ item.progress }} / {{ item.target }}</small>
+        </li>
+      </ul>
+    </section>
+
     <section class="leaderboard">
       <div class="leaderboard-head">
         <h3>排行榜</h3>
@@ -517,6 +679,11 @@ function playEffectTone(freq: number, durationSec: number): void {
           <button type="button" @click="restartLevel">重开本关</button>
         </div>
       </section>
+    </div>
+
+    <div v-if="achievementToast" class="achievement-toast">
+      <strong>Achievement Unlocked</strong>
+      <span>{{ achievementToast.title }}</span>
     </div>
   </main>
 </template>
