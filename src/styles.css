@@ -45,14 +45,68 @@ body {
   font-family: var(--theme-font);
   color: var(--text-color);
   transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
+  animation: shell-enter 240ms ease-out;
 }
 
 .hud {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 12px;
-  gap: 8px 12px;
-  font-size: 14px;
+  gap: 8px;
+}
+
+.hud-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--shell-bg) 82%, #fff 18%);
+  display: grid;
+  gap: 4px;
+}
+
+.hud-card small {
+  font-size: 11px;
+  color: var(--muted-text);
+}
+
+.hud-card strong {
+  font-size: 16px;
+}
+
+.hud-status,
+.hud-progress {
+  grid-column: 1 / -1;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.hud-status {
+  background: color-mix(in srgb, var(--button-active-bg) 28%, transparent 72%);
+}
+
+.hud-progress {
+  display: grid;
+  gap: 6px;
+  background: color-mix(in srgb, var(--shell-bg) 92%, #000 8%);
+}
+
+.hud-progress span {
+  font-size: 12px;
+}
+
+.hud-progress-track {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--button-border) 45%, transparent 55%);
+  overflow: hidden;
+}
+
+.hud-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--button-active-border), var(--button-active-bg));
 }
 
 .mode-panel,
@@ -67,6 +121,44 @@ body {
 .settings-panel,
 .theme-strip {
   margin-bottom: 12px;
+}
+
+.mode-guide {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-left: 4px solid var(--button-active-border);
+  background: color-mix(in srgb, var(--button-active-bg) 35%, transparent 65%);
+  border-radius: 0 10px 10px 0;
+  font-size: 13px;
+  color: var(--muted-text);
+}
+
+.shortcut-strip {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shortcut-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px dashed var(--button-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted-text);
+}
+
+kbd {
+  border: 1px solid var(--button-border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--button-bg) 75%, #fff 25%);
+  color: var(--button-text);
 }
 
 .theme-strip {
@@ -92,6 +184,7 @@ body {
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   padding: 10px;
+  background: color-mix(in srgb, var(--shell-bg) 90%, #fff 10%);
 }
 
 .settings-panel label {
@@ -106,6 +199,7 @@ body {
   border-radius: 10px;
   background: color-mix(in srgb, var(--shell-bg) 82%, #ffffff 18%);
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--board-border) 55%, #fff 45%);
 }
 
 .game-canvas {
@@ -152,12 +246,34 @@ body {
   background: var(--obstacle-color);
 }
 
+.actions {
+  margin-top: 10px;
+}
+
+.action-primary {
+  font-weight: 600;
+}
+
 .leaderboard,
 .analytics-panel,
 .achievements-panel {
-  margin-top: 12px;
-  border-top: 1px solid var(--panel-border);
-  padding-top: 10px;
+  margin-top: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--shell-bg) 92%, #fff 8%);
+}
+
+.insights-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 10px;
+}
+
+.insights-stack {
+  display: grid;
+  gap: 10px;
 }
 
 .leaderboard-head {
@@ -264,15 +380,27 @@ input[type='range'] {
   background: var(--button-bg);
   color: var(--button-text);
   padding: 8px 10px;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
 button {
   cursor: pointer;
 }
 
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--button-active-border) 22%, transparent 78%);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .touch-controls {
@@ -286,6 +414,13 @@ button:disabled {
 .touch-row {
   display: flex;
   gap: 8px;
+}
+
+.touch-controls button {
+  width: 52px;
+  height: 42px;
+  padding: 0;
+  font-size: 18px;
 }
 
 .modal-mask {
@@ -332,6 +467,7 @@ button:disabled {
   padding: 10px 12px;
   display: grid;
   gap: 2px;
+  animation: toast-in 180ms ease-out;
 }
 
 .achievement-toast strong {
@@ -351,6 +487,10 @@ button:disabled {
     box-shadow: none;
   }
 
+  .hud {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .settings-panel {
     flex-direction: column;
     align-items: flex-start;
@@ -358,6 +498,10 @@ button:disabled {
 
   .theme-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .insights-grid {
+    grid-template-columns: 1fr;
   }
 
   .achievements-head {
@@ -370,5 +514,27 @@ button:disabled {
     left: 10px;
     top: 10px;
     min-width: 0;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

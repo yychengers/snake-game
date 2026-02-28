@@ -98,6 +98,17 @@ const pauseDisabled = computed(() => !hasStarted.value || state.value.isGameOver
 const modeLabel = computed(() => MODE_LABEL[state.value.mode]);
 const isSettled = computed(() => hasStarted.value && (state.value.isGameOver || state.value.isCompleted));
 const runDurationMs = computed(() => (startedAt.value ? Date.now() - startedAt.value : 0));
+const modeGuide = computed(() => {
+  if (selectedMode.value === 'classic') return '经典节奏，逐关推进，适合稳定冲分。';
+  if (selectedMode.value === 'endless') return '无尽生存，速度会随分数递进，挑战耐力上限。';
+  if (selectedMode.value === 'obstacle') return '棋盘含障碍，走位更讲究，建议提前规划路线。';
+  return '挑战模式更快更激进，适合熟练玩家冲击极限操作。';
+});
+const levelProgressPct = computed(() =>
+  state.value.mode === 'endless'
+    ? 100
+    : Math.max(0, Math.min(100, Math.floor((state.value.levelScore / LEVEL_TARGET_SCORE) * 100))),
+);
 const themeOptions = THEME_OPTIONS;
 const currentTheme = computed(() => THEME_PRESETS[settings.value.theme]);
 const shellStyle = computed<CSSProperties>(() => ({
@@ -495,12 +506,29 @@ function playEffectTone(freq: number, durationSec: number): void {
 <template>
   <main class="game-shell" :style="shellStyle">
     <header class="hud">
-      <div>模式：<strong>{{ modeLabel }}</strong></div>
-      <div>关卡：<strong>{{ state.level }}/{{ state.mode === 'endless' ? '∞' : MAX_LEVEL }}</strong></div>
-      <div v-if="state.mode !== 'endless'">本关：<strong>{{ state.levelScore }}/{{ LEVEL_TARGET_SCORE }}</strong></div>
-      <div>总分：<strong>{{ state.totalScore }}</strong></div>
-      <div>连击：<strong>x{{ state.multiplier }}</strong></div>
-      <div>{{ statusText }}</div>
+      <div class="hud-card">
+        <small>模式</small>
+        <strong>{{ modeLabel }}</strong>
+      </div>
+      <div class="hud-card">
+        <small>关卡</small>
+        <strong>{{ state.level }}/{{ state.mode === 'endless' ? '∞' : MAX_LEVEL }}</strong>
+      </div>
+      <div class="hud-card">
+        <small>总分</small>
+        <strong>{{ state.totalScore }}</strong>
+      </div>
+      <div class="hud-card">
+        <small>连击倍率</small>
+        <strong>x{{ state.multiplier }}</strong>
+      </div>
+      <div class="hud-status">{{ statusText }}</div>
+      <div v-if="state.mode !== 'endless'" class="hud-progress">
+        <span>本关进度 {{ state.levelScore }}/{{ LEVEL_TARGET_SCORE }}</span>
+        <div class="hud-progress-track">
+          <div class="hud-progress-fill" :style="{ width: `${levelProgressPct}%` }" />
+        </div>
+      </div>
     </header>
 
     <section class="mode-panel">
@@ -518,6 +546,13 @@ function playEffectTone(freq: number, durationSec: number): void {
       </button>
       <button type="button" @click="showSettings = !showSettings">{{ showSettings ? '收起设置' : '展开设置' }}</button>
     </section>
+    <p class="mode-guide">{{ modeGuide }}</p>
+    <div class="shortcut-strip">
+      <span><kbd>WASD/方向键</kbd> 移动</span>
+      <span><kbd>Space</kbd> 暂停</span>
+      <span><kbd>R</kbd> 重开本关</span>
+      <span><kbd>N</kbd> 新游戏</span>
+    </div>
     <section class="theme-strip">
       <button
         v-for="theme in themeOptions"
@@ -575,76 +610,80 @@ function playEffectTone(freq: number, durationSec: number): void {
     </div>
 
     <div class="actions">
-      <button type="button" :disabled="pauseDisabled" @click="togglePauseAction">{{ pauseButtonText }}</button>
+      <button type="button" class="action-primary" :disabled="pauseDisabled" @click="togglePauseAction">{{ pauseButtonText }}</button>
       <button type="button" :disabled="!hasStarted" @click="restartLevel">重开本关 (R)</button>
-      <button type="button" @click="startGame(selectedMode)">新游戏 (N)</button>
+      <button type="button" class="action-primary" @click="startGame(selectedMode)">新游戏 (N)</button>
     </div>
 
-    <section class="achievements-panel">
-      <div class="achievements-head">
-        <h3>成就系统</h3>
-        <div class="achievements-controls">
-          <select v-model="achievementFilter">
-            <option value="all">全部</option>
-            <option value="locked">未解锁</option>
-            <option value="unlocked">已解锁</option>
-            <option value="hidden">隐藏</option>
-          </select>
-          <button v-if="pendingAchievementCount > 0" type="button" @click="markUnlockNotificationsRead">
-            查看新解锁 ({{ pendingAchievementCount }})
-          </button>
-          <button type="button" @click="resetAchievementProgress">重置成就</button>
+    <section class="insights-grid">
+      <section class="achievements-panel">
+        <div class="achievements-head">
+          <h3>成就系统</h3>
+          <div class="achievements-controls">
+            <select v-model="achievementFilter">
+              <option value="all">全部</option>
+              <option value="locked">未解锁</option>
+              <option value="unlocked">已解锁</option>
+              <option value="hidden">隐藏</option>
+            </select>
+            <button v-if="pendingAchievementCount > 0" type="button" @click="markUnlockNotificationsRead">
+              查看新解锁 ({{ pendingAchievementCount }})
+            </button>
+            <button type="button" @click="resetAchievementProgress">重置成就</button>
+          </div>
         </div>
-      </div>
-      <p>已解锁 {{ unlockedAchievements }}/{{ ACHIEVEMENTS.length }}</p>
-      <ul class="achievement-list">
-        <li v-for="item in filteredAchievements" :key="item.id" :class="{ unlocked: item.unlocked }">
-          <div class="achievement-row">
-            <strong>{{ item.title }}</strong>
-            <span>{{ item.unlocked ? '已解锁' : '未解锁' }}</span>
-          </div>
-          <p>{{ item.description }}</p>
-          <div class="achievement-progress">
-            <div class="achievement-progress-bar" :style="{ width: `${item.progressPct}%` }" />
-          </div>
-          <small>{{ item.progress }} / {{ item.target }}</small>
-        </li>
-      </ul>
-    </section>
+        <p>已解锁 {{ unlockedAchievements }}/{{ ACHIEVEMENTS.length }}</p>
+        <ul class="achievement-list">
+          <li v-for="item in filteredAchievements" :key="item.id" :class="{ unlocked: item.unlocked }">
+            <div class="achievement-row">
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.unlocked ? '已解锁' : '未解锁' }}</span>
+            </div>
+            <p>{{ item.description }}</p>
+            <div class="achievement-progress">
+              <div class="achievement-progress-bar" :style="{ width: `${item.progressPct}%` }" />
+            </div>
+            <small>{{ item.progress }} / {{ item.target }}</small>
+          </li>
+        </ul>
+      </section>
 
-    <section class="leaderboard">
-      <div class="leaderboard-head">
-        <h3>排行榜</h3>
-        <button type="button" @click="clearRecords">清空记录</button>
-      </div>
-      <p v-if="topScore">总榜最高分：{{ MODE_LABEL[topScore.mode] }} {{ topScore.totalScore }}</p>
-      <p v-if="fastestCompletion">最快通关：{{ MODE_LABEL[fastestCompletion.mode] }} {{ formatDuration(fastestCompletion.durationMs) }}</p>
-      <ul>
-        <li v-for="item in topByMode" :key="item.mode">
-          {{ MODE_LABEL[item.mode] }} 最佳：{{ item.entry ? item.entry.totalScore : '-' }}
-        </li>
-      </ul>
-      <h4>最近战绩</h4>
-      <ul>
-        <li v-for="(item, index) in leaderboard.recent" :key="`${item.playedAt}-${index}`">
-          {{ MODE_LABEL[item.mode] }} | 分数 {{ item.totalScore }} | 关卡 {{ item.level }} | 时长 {{ formatDuration(item.durationMs) }}
-          <strong v-if="item.completed"> 通关</strong>
-        </li>
-        <li v-if="leaderboard.recent.length === 0">暂无记录</li>
-      </ul>
-    </section>
+      <div class="insights-stack">
+        <section class="leaderboard">
+          <div class="leaderboard-head">
+            <h3>排行榜</h3>
+            <button type="button" @click="clearRecords">清空记录</button>
+          </div>
+          <p v-if="topScore">总榜最高分：{{ MODE_LABEL[topScore.mode] }} {{ topScore.totalScore }}</p>
+          <p v-if="fastestCompletion">最快通关：{{ MODE_LABEL[fastestCompletion.mode] }} {{ formatDuration(fastestCompletion.durationMs) }}</p>
+          <ul>
+            <li v-for="item in topByMode" :key="item.mode">
+              {{ MODE_LABEL[item.mode] }} 最佳：{{ item.entry ? item.entry.totalScore : '-' }}
+            </li>
+          </ul>
+          <h4>最近战绩</h4>
+          <ul>
+            <li v-for="(item, index) in leaderboard.recent" :key="`${item.playedAt}-${index}`">
+              {{ MODE_LABEL[item.mode] }} | 分数 {{ item.totalScore }} | 关卡 {{ item.level }} | 时长 {{ formatDuration(item.durationMs) }}
+              <strong v-if="item.completed"> 通关</strong>
+            </li>
+            <li v-if="leaderboard.recent.length === 0">暂无记录</li>
+          </ul>
+        </section>
 
-    <section class="analytics-panel">
-      <h3>本地统计</h3>
-      <p>开局 {{ analytics.sessions }} 次，结束 {{ analytics.finishes }} 次，通关 {{ analytics.completions }} 次</p>
-      <p>平均时长：{{ analytics.finishes ? formatDuration(Math.floor(analytics.totalDurationMs / analytics.finishes)) : '0:00' }}</p>
-      <p>
-        模式占比：
-        经典 {{ analytics.modeStarts.classic }} /
-        无尽 {{ analytics.modeStarts.endless }} /
-        障碍 {{ analytics.modeStarts.obstacle }} /
-        挑战 {{ analytics.modeStarts.challenge }}
-      </p>
+        <section class="analytics-panel">
+          <h3>本地统计</h3>
+          <p>开局 {{ analytics.sessions }} 次，结束 {{ analytics.finishes }} 次，通关 {{ analytics.completions }} 次</p>
+          <p>平均时长：{{ analytics.finishes ? formatDuration(Math.floor(analytics.totalDurationMs / analytics.finishes)) : '0:00' }}</p>
+          <p>
+            模式占比：
+            经典 {{ analytics.modeStarts.classic }} /
+            无尽 {{ analytics.modeStarts.endless }} /
+            障碍 {{ analytics.modeStarts.obstacle }} /
+            挑战 {{ analytics.modeStarts.challenge }}
+          </p>
+        </section>
+      </div>
     </section>
 
     <div v-if="showTouchControls" class="touch-controls" aria-label="touch controls">
