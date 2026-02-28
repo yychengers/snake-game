@@ -74,6 +74,9 @@ const boardRef = ref<HTMLCanvasElement | null>(null);
 const showSettings = ref(false);
 const achievements = ref<AchievementStore>(loadAchievements());
 const achievementFilter = ref<'all' | 'unlocked' | 'locked' | 'hidden'>('all');
+const achievementExpandedId = ref<AchievementId | null>(null);
+const leaderboardModeFilter = ref<'all' | GameMode>('all');
+const leaderboardSort = ref<'latest' | 'score' | 'duration'>('latest');
 const achievementToast = ref<{ id: AchievementId; title: string } | null>(null);
 const runTracker = ref<{
   mode: GameMode;
@@ -136,6 +139,19 @@ const shellStyle = computed<CSSProperties>(() => ({
 
 const topScore = computed(() => getTopScore(leaderboard.value));
 const fastestCompletion = computed(() => getFastestCompletion(leaderboard.value));
+const suggestedNextAction = computed(() => {
+  if (state.value.isCompleted) {
+    return selectedMode.value === 'classic'
+      ? '建议：试试挑战模式，冲击高连击。'
+      : '建议：尝试更高难度模式继续冲分。';
+  }
+  if (state.value.isGameOver) {
+    if (state.value.mode === 'obstacle') return '建议：障碍模式优先贴边走位，降低封路风险。';
+    if (state.value.mode === 'challenge') return '建议：挑战模式先稳住路线，再追求连击。';
+    return '建议：下一局保持中速节奏，优先扩大安全活动区。';
+  }
+  return '建议：保持稳定节奏，优先确保走位空间。';
+});
 const unlockedAchievements = computed(
   () => ACHIEVEMENTS.filter((item) => achievements.value.entries[item.id].unlocked).length,
 );
@@ -150,6 +166,7 @@ const filteredAchievements = computed(() =>
       description: hiddenLocked ? item.hint ?? '解锁后查看完整条件。' : item.description,
       hidden: Boolean(item.hidden),
       unlocked: entry.unlocked,
+      unlockedAt: entry.unlockedAt,
       progress: Math.min(entry.progress, item.target),
       target: item.target,
       progressPct: Math.min(100, Math.floor((Math.min(entry.progress, item.target) / item.target) * 100)),
@@ -161,6 +178,20 @@ const filteredAchievements = computed(() =>
     return !item.unlocked;
   }),
 );
+const filteredLeaderboard = computed(() => {
+  const base =
+    leaderboardModeFilter.value === 'all'
+      ? [...leaderboard.value.recent]
+      : leaderboard.value.recent.filter((item) => item.mode === leaderboardModeFilter.value);
+
+  if (leaderboardSort.value === 'score') {
+    return base.sort((a, b) => b.totalScore - a.totalScore);
+  }
+  if (leaderboardSort.value === 'duration') {
+    return base.sort((a, b) => a.durationMs - b.durationMs);
+  }
+  return base;
+});
 const topByMode = computed(() =>
   GAME_MODES.map((mode) => ({
     mode,
@@ -396,6 +427,10 @@ function clearRecords(): void {
 function markUnlockNotificationsRead(): void {
   achievements.value = markAchievementUnlocksSeen(achievements.value);
   saveAchievements(achievements.value);
+}
+
+function toggleAchievementExpand(id: AchievementId): void {
+  achievementExpandedId.value = achievementExpandedId.value === id ? null : id;
 }
 
 function resetAchievementProgress(): void {
@@ -644,6 +679,16 @@ function playEffectTone(freq: number, durationSec: number): void {
               <div class="achievement-progress-bar" :style="{ width: `${item.progressPct}%` }" />
             </div>
             <small>{{ item.progress }} / {{ item.target }}</small>
+            <button type="button" class="inline-detail-btn" @click="toggleAchievementExpand(item.id)">
+              {{ achievementExpandedId === item.id ? '收起详情' : '查看详情' }}
+            </button>
+            <div v-if="achievementExpandedId === item.id" class="achievement-detail">
+              <p>达成阈值：{{ item.target }}</p>
+              <p v-if="item.unlocked && item.unlockedAt">
+                解锁时间：{{ new Date(item.unlockedAt).toLocaleString() }}
+              </p>
+              <p v-else>尚未解锁，继续加油。</p>
+            </div>
           </li>
         </ul>
       </section>
@@ -652,7 +697,18 @@ function playEffectTone(freq: number, durationSec: number): void {
         <section class="leaderboard">
           <div class="leaderboard-head">
             <h3>排行榜</h3>
-            <button type="button" @click="clearRecords">清空记录</button>
+            <div class="leaderboard-tools">
+              <select v-model="leaderboardModeFilter">
+                <option value="all">全部模式</option>
+                <option v-for="mode in GAME_MODES" :key="mode" :value="mode">{{ MODE_LABEL[mode] }}</option>
+              </select>
+              <select v-model="leaderboardSort">
+                <option value="latest">最近优先</option>
+                <option value="score">按分数</option>
+                <option value="duration">按时长</option>
+              </select>
+              <button type="button" @click="clearRecords">清空记录</button>
+            </div>
           </div>
           <p v-if="topScore">总榜最高分：{{ MODE_LABEL[topScore.mode] }} {{ topScore.totalScore }}</p>
           <p v-if="fastestCompletion">最快通关：{{ MODE_LABEL[fastestCompletion.mode] }} {{ formatDuration(fastestCompletion.durationMs) }}</p>
@@ -663,11 +719,11 @@ function playEffectTone(freq: number, durationSec: number): void {
           </ul>
           <h4>最近战绩</h4>
           <ul>
-            <li v-for="(item, index) in leaderboard.recent" :key="`${item.playedAt}-${index}`">
+            <li v-for="(item, index) in filteredLeaderboard" :key="`${item.playedAt}-${index}`">
               {{ MODE_LABEL[item.mode] }} | 分数 {{ item.totalScore }} | 关卡 {{ item.level }} | 时长 {{ formatDuration(item.durationMs) }}
               <strong v-if="item.completed"> 通关</strong>
             </li>
-            <li v-if="leaderboard.recent.length === 0">暂无记录</li>
+            <li v-if="filteredLeaderboard.length === 0">暂无记录</li>
           </ul>
         </section>
 
@@ -702,6 +758,7 @@ function playEffectTone(freq: number, durationSec: number): void {
         <p>关卡：{{ state.level }}</p>
         <p>连击倍率：x{{ state.multiplier }}</p>
         <p>用时：{{ formatDuration(runDurationMs) }}</p>
+        <p class="settled-tip">{{ suggestedNextAction }}</p>
         <div class="modal-actions">
           <button type="button" @click="startGame(selectedMode)">再来一局</button>
           <button type="button" @click="restartLevel">重开本关</button>

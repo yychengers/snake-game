@@ -283,6 +283,12 @@ kbd {
   gap: 8px;
 }
 
+.leaderboard-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .achievements-head {
   display: flex;
   justify-content: space-between;
@@ -372,6 +378,24 @@ kbd {
   color: var(--muted-text);
 }
 
+.inline-detail-btn {
+  margin-top: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.achievement-detail {
+  margin-top: 6px;
+  border-top: 1px dashed var(--panel-border);
+  padding-top: 6px;
+}
+
+.achievement-detail p {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--muted-text);
+}
+
 button,
 select,
 input[type='range'] {
@@ -448,6 +472,15 @@ button:disabled {
   margin: 4px 0;
 }
 
+.settled-tip {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--button-active-bg) 30%, transparent 70%);
+  border: 1px solid color-mix(in srgb, var(--button-active-border) 60%, transparent 40%);
+  font-size: 12px;
+}
+
 .modal-actions {
   margin-top: 12px;
   display: flex;
@@ -505,6 +538,11 @@ button:disabled {
   }
 
   .achievements-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .leaderboard-head {
     align-items: flex-start;
     flex-direction: column;
   }
