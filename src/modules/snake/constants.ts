@@ -17,7 +17,7 @@ export const OPPOSITE: Record<Direction, Direction> = {
 };
 
 /** 菜单展示顺序使用的模式列表。 */
-export const GAME_MODES: GameMode[] = ['classic', 'endless', 'obstacle', 'challenge'];
+export const GAME_MODES: GameMode[] = ['classic', 'endless', 'obstacle', 'challenge', 'timed'];
 
 /** 模式名称的中文文案。 */
 export const MODE_LABEL: Record<GameMode, string> = {
@@ -25,6 +25,7 @@ export const MODE_LABEL: Record<GameMode, string> = {
   endless: '无尽',
   obstacle: '障碍',
   challenge: '挑战',
+  timed: '计时赛',
 };
 
 /** 关卡与玩法节奏常量。 */

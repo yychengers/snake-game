@@ -47,7 +47,12 @@ export function trackStart(data: AnalyticsData, mode: GameMode): AnalyticsData {
 }
 
 /** 记录结束事件（失败或通关）。 */
-export function trackFinish(data: AnalyticsData, mode: GameMode, durationMs: number, completed: boolean): AnalyticsData {
+export function trackFinish(
+  data: AnalyticsData,
+  mode: GameMode,
+  durationMs: number,
+  completed: boolean,
+): AnalyticsData {
   const next = normalizeAnalytics(data);
   next.finishes += 1;
   next.modeFinishes[mode] += 1;
@@ -64,8 +69,8 @@ function emptyAnalytics(): AnalyticsData {
     finishes: 0,
     completions: 0,
     totalDurationMs: 0,
-    modeStarts: { classic: 0, endless: 0, obstacle: 0, challenge: 0 },
-    modeFinishes: { classic: 0, endless: 0, obstacle: 0, challenge: 0 },
+    modeStarts: { classic: 0, endless: 0, obstacle: 0, challenge: 0, timed: 0 },
+    modeFinishes: { classic: 0, endless: 0, obstacle: 0, challenge: 0, timed: 0 },
   };
 }
 
@@ -81,12 +86,14 @@ function normalizeAnalytics(input: Partial<AnalyticsData>): AnalyticsData {
       endless: Number(input.modeStarts?.endless ?? base.modeStarts.endless),
       obstacle: Number(input.modeStarts?.obstacle ?? base.modeStarts.obstacle),
       challenge: Number(input.modeStarts?.challenge ?? base.modeStarts.challenge),
+      timed: Number(input.modeStarts?.timed ?? base.modeStarts.timed),
     },
     modeFinishes: {
       classic: Number(input.modeFinishes?.classic ?? base.modeFinishes.classic),
       endless: Number(input.modeFinishes?.endless ?? base.modeFinishes.endless),
       obstacle: Number(input.modeFinishes?.obstacle ?? base.modeFinishes.obstacle),
       challenge: Number(input.modeFinishes?.challenge ?? base.modeFinishes.challenge),
+      timed: Number(input.modeFinishes?.timed ?? base.modeFinishes.timed),
     },
   };
 }

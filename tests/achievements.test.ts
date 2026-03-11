@@ -81,8 +81,8 @@ describe('achievement logic', () => {
         finishes: 12,
         completions: 3,
         totalDurationMs: 10000,
-        modeStarts: { classic: 10, endless: 5, obstacle: 5, challenge: 2 },
-        modeFinishes: { classic: 8, endless: 2, obstacle: 1, challenge: 1 },
+        modeStarts: { classic: 10, endless: 5, obstacle: 5, challenge: 2, timed: 0 },
+        modeFinishes: { classic: 8, endless: 2, obstacle: 1, challenge: 1, timed: 0 },
       },
       {
         recent: [

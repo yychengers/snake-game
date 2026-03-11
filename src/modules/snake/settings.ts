@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, THEME_IDS, type GameSettings } from './config';
+import { DEFAULT_SETTINGS, SNAKE_SKINS, THEME_IDS, type GameSettings, type SnakeSkinId } from './config';
 
 const SETTINGS_KEY = 'snake_settings_v1';
 
@@ -38,6 +38,8 @@ function normalizeSettings(input: Partial<GameSettings>): GameSettings {
   const gridSize = Number(input.gridSize ?? DEFAULT_SETTINGS.gridSize);
   const speedScale = Number(input.speedScale ?? DEFAULT_SETTINGS.speedScale);
 
+  const skinIds = Object.keys(SNAKE_SKINS) as SnakeSkinId[];
+
   return {
     audioEnabled: Boolean(input.audioEnabled ?? DEFAULT_SETTINGS.audioEnabled),
     gridSize: Math.max(12, Math.min(36, Math.floor(gridSize))),
@@ -48,5 +50,8 @@ function normalizeSettings(input: Partial<GameSettings>): GameSettings {
     theme: THEME_IDS.includes(input.theme as (typeof THEME_IDS)[number])
       ? (input.theme as GameSettings['theme'])
       : DEFAULT_SETTINGS.theme,
+    snakeSkin: skinIds.includes(input.snakeSkin as SnakeSkinId)
+      ? (input.snakeSkin as SnakeSkinId)
+      : DEFAULT_SETTINGS.snakeSkin,
   };
 }

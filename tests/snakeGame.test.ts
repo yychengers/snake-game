@@ -25,7 +25,13 @@ describe('snake game expanded logic', () => {
   });
 
   it('obstacle mode has obstacles and collision ends game', () => {
-    const state = createInitialState({ width: 12, height: 12, mode: 'obstacle', level: 3, randomFn: () => 0 });
+    const state = createInitialState({
+      width: 12,
+      height: 12,
+      mode: 'obstacle',
+      level: 3,
+      randomFn: () => 0,
+    });
     expect(state.obstacles.length).toBeGreaterThan(0);
 
     const obstacle = state.obstacles[0];
@@ -80,7 +86,13 @@ describe('snake game expanded logic', () => {
   });
 
   it('classic mode unlocks next level after 100 foods', () => {
-    const state = createInitialState({ width: 8, height: 8, mode: 'classic', level: 1, randomFn: () => 0 });
+    const state = createInitialState({
+      width: 8,
+      height: 8,
+      mode: 'classic',
+      level: 1,
+      randomFn: () => 0,
+    });
     state.levelScore = LEVEL_TARGET_SCORE - 1;
     state.food = { x: state.snake[0].x + 1, y: state.snake[0].y, type: 'normal' };
 
@@ -91,7 +103,13 @@ describe('snake game expanded logic', () => {
   });
 
   it('endless mode never auto-levels after 100 foods', () => {
-    const state = createInitialState({ width: 8, height: 8, mode: 'endless', level: 1, randomFn: () => 0 });
+    const state = createInitialState({
+      width: 8,
+      height: 8,
+      mode: 'endless',
+      level: 1,
+      randomFn: () => 0,
+    });
     state.levelScore = LEVEL_TARGET_SCORE - 1;
     state.food = { x: state.snake[0].x + 1, y: state.snake[0].y, type: 'normal' };
 
@@ -167,7 +185,12 @@ describe('snake game expanded logic', () => {
   });
 
   it('restartCurrentLevel keeps meta progress but resets round state', () => {
-    const seed = createInitialState({ width: 10, height: 10, mode: 'challenge', randomFn: () => 0 });
+    const seed = createInitialState({
+      width: 10,
+      height: 10,
+      mode: 'challenge',
+      randomFn: () => 0,
+    });
     const progressed: GameState = {
       ...seed,
       level: 4,
@@ -176,7 +199,10 @@ describe('snake game expanded logic', () => {
       levelScore: 42,
       comboCount: 3,
       comboTicksRemaining: 7,
-      snake: [{ x: 4, y: 4 }, { x: 3, y: 4 }],
+      snake: [
+        { x: 4, y: 4 },
+        { x: 3, y: 4 },
+      ],
       isPaused: true,
     };
 
@@ -193,7 +219,14 @@ describe('snake game expanded logic', () => {
 
   it('patchSettings clamps values into allowed ranges', () => {
     const next = patchSettings(
-      { audioEnabled: false, gridSize: 20, speedScale: 1, keymap: 'both', theme: 'sage' },
+      {
+        audioEnabled: false,
+        gridSize: 20,
+        speedScale: 1,
+        keymap: 'both',
+        theme: 'sage',
+        snakeSkin: 'classic',
+      },
       { gridSize: 200, speedScale: 0.2, keymap: 'invalid' as never, theme: 'invalid' as never },
     );
 
@@ -204,16 +237,31 @@ describe('snake game expanded logic', () => {
   });
 
   it('obstacles never spawn near initial center area', () => {
-    const state = createInitialState({ width: 20, height: 20, mode: 'obstacle', level: 4, randomFn: () => 0 });
+    const state = createInitialState({
+      width: 20,
+      height: 20,
+      mode: 'obstacle',
+      level: 4,
+      randomFn: () => 0,
+    });
     const center = Math.floor(state.width / 2);
-    const invalid = state.obstacles.some((p) => Math.abs(p.x - center) <= 2 && Math.abs(p.y - center) <= 2);
+    const invalid = state.obstacles.some(
+      (p) => Math.abs(p.x - center) <= 2 && Math.abs(p.y - center) <= 2,
+    );
     expect(invalid).toBe(false);
   });
 
   it('mode balance config drives obstacle count growth', () => {
     const level = 5;
-    const state = createInitialState({ width: 30, height: 30, mode: 'obstacle', level, randomFn: () => 0 });
-    const expectedMin = MODE_BALANCE.obstacle.obstacleBase + level * MODE_BALANCE.obstacle.obstaclePerLevel;
+    const state = createInitialState({
+      width: 30,
+      height: 30,
+      mode: 'obstacle',
+      level,
+      randomFn: () => 0,
+    });
+    const expectedMin =
+      MODE_BALANCE.obstacle.obstacleBase + level * MODE_BALANCE.obstacle.obstaclePerLevel;
     expect(state.obstacles.length).toBeGreaterThanOrEqual(expectedMin);
   });
 });

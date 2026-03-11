@@ -1,7 +1,7 @@
 import { COMBO_WINDOW_TICKS, EFFECT_TICKS, LEVEL_TICK_MS } from './constants';
 import { MODE_BALANCE } from './config';
 import { containsPoint, pointKey } from './utils';
-import type { ActiveEffects, FoodType, GameMode, Point } from './types';
+import type { ActiveEffects, FoodType, GameMode, GameState, Item, ItemType, Point } from './types';
 
 /**
  * 该文件是“规则层”，不直接关心 UI/定时器。
@@ -71,6 +71,55 @@ export function rollFoodType(mode: GameMode, randomFn: () => number): FoodType {
   if (r < weights.normal + weights.speed) return 'speed';
   if (r < weights.normal + weights.speed + weights.slow) return 'slow';
   return 'double';
+}
+
+/** Randomly picks next item type by current mode probabilities. Returns null if no item should spawn. */
+export function rollItemType(mode: GameMode, randomFn: () => number): ItemType | null {
+  const balance = MODE_BALANCE[mode];
+  if (!balance.itemWeights) {
+    return null;
+  }
+
+  const weights = balance.itemWeights;
+  const total = weights.shield + weights.teleport + weights.clear_obstacles;
+  const r = randomFn() * total;
+
+  if (r < weights.shield) return 'shield';
+  if (r < weights.shield + weights.teleport) return 'teleport';
+  return 'clear_obstacles';
+}
+
+/** Places next item on a free non-snake, non-obstacle, non-food tile. */
+export function placeItem(
+  state: Pick<GameState, 'width' | 'height' | 'snake' | 'obstacles' | 'food' | 'mode'>,
+  randomFn: () => number = Math.random,
+): Item | null {
+  const balance = MODE_BALANCE[state.mode as GameMode];
+  if (!balance.itemWeights || randomFn() > 0.3) {
+    return null;
+  }
+
+  const itemType = rollItemType(state.mode, randomFn);
+  if (!itemType) return null;
+
+  const blocked = new Set<string>();
+  for (const part of state.snake) blocked.add(pointKey(part));
+  for (const obstacle of state.obstacles) blocked.add(pointKey(obstacle));
+  blocked.add(pointKey(state.food));
+
+  const freeSpots: Point[] = [];
+  for (let y = 0; y < state.height; y += 1) {
+    for (let x = 0; x < state.width; x += 1) {
+      if (!blocked.has(`${x},${y}`)) {
+        freeSpots.push({ x, y });
+      }
+    }
+  }
+
+  if (freeSpots.length === 0) return null;
+
+  const index = Math.floor(randomFn() * freeSpots.length);
+  return { ...freeSpots[index], type: itemType };
 }
 
 /** Decrements temporary effect counters each tick. */

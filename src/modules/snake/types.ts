@@ -1,9 +1,17 @@
 /** 四个基础移动方向。 */
 export type Direction = 'up' | 'down' | 'left' | 'right';
-/** 游戏模式：经典/无尽/障碍/挑战。 */
-export type GameMode = 'classic' | 'endless' | 'obstacle' | 'challenge';
+/** 游戏模式：经典/无尽/障碍/挑战/计时赛。 */
+export type GameMode = 'classic' | 'endless' | 'obstacle' | 'challenge' | 'timed';
 /** 食物类型：普通/加速/减速/双倍。 */
 export type FoodType = 'normal' | 'speed' | 'slow' | 'double';
+
+/** 道具类型：护盾/瞬间移动/清除障碍。 */
+export type ItemType = 'shield' | 'teleport' | 'clear_obstacles';
+
+/** 道具是带类型标记的坐标点。 */
+export type Item = Point & {
+  type: ItemType;
+};
 
 export type Point = {
   x: number;
@@ -32,6 +40,7 @@ export type GameState = {
   direction: Direction;
   nextDirection: Direction;
   food: Food;
+  item: Item | null;
   level: number;
   levelScore: number;
   totalScore: number;
@@ -40,6 +49,9 @@ export type GameState = {
   comboTicksRemaining: number;
   multiplier: number;
   effects: ActiveEffects;
+  hasShield: boolean;
+  timeRemaining: number;
+  timeLimit: number;
   isGameOver: boolean;
   isPaused: boolean;
   isCompleted: boolean;
@@ -74,4 +86,15 @@ export type InitOptions = {
 /** 每帧推进时的可选参数（当前用于注入随机函数便于测试）。 */
 export type AdvanceOptions = {
   randomFn?: () => number;
+};
+
+/** 蛇身皮肤类型。 */
+export type SnakeSkinId = 'classic' | 'cute' | 'pixel' | 'neon' | 'forest' | 'dragon';
+
+export type SnakeSkin = {
+  id: SnakeSkinId;
+  label: string;
+  headColor: string;
+  bodyColor: string;
+  hasAnimation: boolean;
 };
