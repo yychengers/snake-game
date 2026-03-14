@@ -6,6 +6,8 @@ import TetrisGame from './modules/tetris/TetrisGame.vue';
 type GameType = 'snake' | 'tetris';
 
 const currentGame = ref<GameType>('snake');
+
+console.log(currentGame, 'common currentGame');
 </script>
 
 <template>
